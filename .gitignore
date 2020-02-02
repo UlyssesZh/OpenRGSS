@@ -1,4 +1,4 @@
-/.idea/
+.idea
 Gemfile.lock
 
 # rcov generated
@@ -50,3 +50,5 @@ pkg
 
 # For rubinius:
 #*.rbc
+
+.rakeTasks
