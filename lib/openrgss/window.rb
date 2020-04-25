@@ -82,7 +82,7 @@ class Window
 	@@border     = {}
 	@@tone       = {}
 	
-	def initialize(x=0, y=0, width=0, height=0)
+	def initialize x = 0, y = 0, width = 0, height = 0
 		@x                = x
 		@y                = y
 		@z                = 100
@@ -91,7 +91,7 @@ class Window
 		@width            = width
 		@height           = height
 		@tone             = Tone.new
-		@contents         = Bitmap.new(32, 32)
+		@contents         = Bitmap.new 32, 32
 		@cursor_rect      = Rect.new
 		@back_opacity     = 200
 		@opacity          = 255
@@ -108,65 +108,61 @@ class Window
 	
 	
 	def update
-		if active
-			@cursor_status = (@cursor_status + 4) % 511
-		else
-			@cursor_status = 0
-		end
+		@cursor_status = active ? (@cursor_status + 4) % 511 : 0
 	end
 	
-	def move(x, y, width, height)
-		@x      = x
-		@y      = y
-		@width  = width
-		@height = height
+	def move x, y, width, height
+		@x, @y, @width, @height = x, y, width, height
 	end
 	
 	def open?
 		openness == 255
 	end
 	
-	
 	def close?
 		openness == 0
 	end
 	
-	def openness=(openness)
-		@openness = openness < 0 ? 0 : openness > 255 ? 255 : openness
+	def openness= openness
+		@openness = openness.clamp 0, 255
 	end
 	
-	
-	def draw(destination=Graphics)
+	def draw destination = Graphics
 		return if close?
-		base_x = @x-@ox
-		base_y = @y-@oy
-		if viewport
-			destination.entity.set_clip_rect(viewport.rect.x, viewport.rect.y, viewport.rect.width, viewport.rect.height)
-			base_x += viewport.rect.x - viewport.ox
-			base_y += viewport.rect.y - viewport.oy
+		
+		base_x = @x - @ox
+		base_y = @y - @oy
+		if @viewport
+			destination.entity.set_clip_rect *viewport.rect
+			base_x += @viewport.rect.x - @viewport.ox
+			base_y += @viewport.rect.y - @viewport.oy
 		end
-		if @openness < 255
-			base_y += @height*(255-@openness)/255 / 2
+		base_y += @height * (255 - @openness) / 255 / 2 if @openness < 255
+		if @opacity.positive? && @back_opacity.positive? && @height * @openness / 255 > 8
+			destination.entity.put background(destination), base_x + 4, base_y + 4
 		end
-		destination.entity.put(background(destination), base_x+4, base_y+4) if opacity > 0 and back_opacity > 0 and @height * @openness / 255 - 8 > 0
-		destination.entity.put(border(destination), base_x, base_y) if opacity > 0
+		destination.entity.put border(destination), base_x, base_y if @opacity.positive?
 		
 		if open?
-			if contents_opacity > 0
-				SDL::Surface.blit(@contents.entity, 0, 0, @width-padding*2, @height-padding-padding_bottom, destination.entity, base_x+padding, base_y+padding)
+			if @contents_opacity.positive?
+				SDL::Surface.blit @contents.entity, 0, 0, @width - padding * 2,
+				                  @height - padding - padding_bottom, destination.entity,
+				                  base_x + padding, base_y + padding
 			end
 			
-			
-			#cursor
-			if cursor_rect.width > 0 and cursor_rect.height > 0
-				destination.entity.put cursor(destination), base_x + cursor_rect.x + padding, base_y + cursor_rect.y + padding
+			# cursor
+			if @cursor_rect.width.positive? && @cursor_rect.height.positive?
+				destination.entity.put cursor(destination), base_x + cursor_rect.x + padding,
+				                       base_y + cursor_rect.y + padding
 				#cursor_color = (255 - @cursor_status).abs
 				#destination.entity.draw_rect(base_x+padding+cursor_rect.x, base_y+padding+cursor_rect.y, cursor_rect.width, cursor_rect.height, destination.entity.map_rgba(cursor_color, cursor_color, 255, 255))
 			end
 		end
 		
 		
-		destination.entity.set_clip_rect(0, 0, destination.width, destination.height) if viewport
+		if viewport
+			destination.entity.set_clip_rect 0, 0, destination.width, destination.height
+		end
 	end
 	
 	

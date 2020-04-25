@@ -80,7 +80,7 @@ class Bitmap
 	
 	def blt x, y, src_bitmap, src_rect, opacity = 255
 		src_bitmap.entity.set_alpha SDL::RLEACCEL, opacity
-		SDL::Surface.blit src_bitmap.entity, src_rect.x, src_rect.y, src_rect.width, src_rect.height, @entity, x, y
+		SDL::Surface.blit src_bitmap.entity, *src_rect, @entity, x, y
 		src_bitmap.entity.set_alpha SDL::SRCALPHA | SDL::RLEACCEL, 255
 	end
 	
@@ -134,6 +134,7 @@ class Bitmap
 				)
 			end
 		end
+		nil
 	end
 	
 	# Clears the entire bitmap.

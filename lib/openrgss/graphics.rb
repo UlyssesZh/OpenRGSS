@@ -1,19 +1,16 @@
 module Graphics
 	FPS_COUNT               = 30
-	DEFAULT_FRAME_RATE      = 60
-	DEFAULT_WIDTH           = 640
-	DEFAULT_HEIGHT          = 480
-	@frame_rate             = DEFAULT_FRAME_RATE
+	@frame_rate             = 60
 	@frame_count            = 0
 	@frame_count_recent     = 0
 	@skip                   = 0
 	@ticks                  = 0
 	@fps_ticks              = 0
 	@brightness             = 255
-	@width                  = DEFAULT_WIDTH
-	@height                 = DEFAULT_HEIGHT
-	@graphics_render_target = Bitmap.new @width, @height # need rebuild when resize.
-	@frozen                 = false                # or true?
+	@width                  = 640
+	@height                 = 480
+	@graphics_render_target = Bitmap.new @width, @height
+	@frozen                 = false # or true?
 	class << self
 		attr_reader :width, :height, :real_fps
 		attr_accessor :entity, :frame_rate, :frame_count, :brightness
@@ -21,28 +18,25 @@ module Graphics
 		def resize_screen width, height
 			return if @width == width && @height == height
 			
-			bitmap = Bitmap.new width, height
-			bitmap.blt 0, 0, @graphics_render_target, Rect.new(@width, @height)
-			@width = width
-			@height = height
-			@graphics_render_target.dispose
-			@graphics_render_target = bitmap
+			@width, @height = width, height
+			init
 		end
 		
 		def update
 			RGSS.update
 			@frame_count += 1
-			if @skip >= 10 or SDL.get_ticks < @ticks + 1000 / frame_rate
-				@entity.fill_rect(0, 0, @width, @height, 0x000000)
+			if @skip >= 10 || SDL.get_ticks < @ticks + 1000 / frame_rate
+				@entity.fill_rect 0, 0, @width, @height, 0x000000
 				if @old_resources != RGSS.resources # Maybe here can make a dirty mark
 					RGSS.resources.sort!
 					@old_resources = RGSS.resources.clone
 				end
 				
 				unless @frozen # redraw only when !frozen
-					@graphics_render_target.entity.fill_rect(0, 0, @width, @height, @graphics_render_target.entity.map_rgba(0, 0, 0, 255))
-					@graphics_render_target.entity.set_alpha(SDL::RLEACCEL, 0)
-					RGSS.resources.each { |resource| resource.draw(@graphics_render_target) }
+					@graphics_render_target.entity.fill_rect 0, 0, @width, @height,
+					                                         @graphics_render_target.entity.map_rgba(0, 0, 0, 255)
+					@graphics_render_target.entity.set_alpha SDL::RLEACCEL, 0
+					RGSS.resources.each { |resource| resource.draw @graphics_render_target }
 				end
 				@entity.put @graphics_render_target.entity, 0, 0
 				#@entity.drawRect(0, 0, @width, @height, @entity.map_rgb(0, 0, 0), true, 255-@brightness) # draw gray layout
@@ -66,7 +60,7 @@ module Graphics
 		end
 		
 		def wait duration
-			duration.times { update }
+			duration.times &:update
 		end
 		
 		def fadeout duration
@@ -106,15 +100,16 @@ module Graphics
 				end
 				# TODO : free
 			else #
-				imgmap = Array.new(@width) { Array.new(@height) { 255 } }
+				imgmap = Array.new(@width) { Array.new @height, 255 }
 			end
 			#step = 255 / duration
 			new_frame = Bitmap.new(@width, @height)
 			RGSS.resources.sort!
 			@old_resources = RGSS.resources.clone
-			new_frame.entity.fill_rect(0, 0, @width, @height, new_frame.entity.map_rgba(0, 0, 0, 255))
-			new_frame.entity.set_alpha(SDL::SRCALPHA, 255)
-			RGSS.resources.each { |resource| resource.draw(new_frame) }
+			new_frame.entity.fill_rect 0, 0, @width, @height,
+			                           new_frame.entity.map_rgba(0, 0, 0, 255)
+			new_frame.entity.set_alpha SDL::SRCALPHA, 255
+			RGSS.resources.each { |resource| resource.draw new_frame }
 			# draw frame to bitmap
 			
 			pf = new_frame.entity.format
@@ -127,15 +122,20 @@ module Graphics
 			new_frame.entity.unlock
 			maker = Bitmap.new @width, @height
 			# create pre-render layout
-			maker.entity.fill_rect 0, 0, @width, @height, new_frame.entity.map_rgba(0, 0, 0, 255)
+			maker.entity.fill_rect 0, 0, @width, @height,
+			                       new_frame.entity.map_rgba(0, 0, 0, 255)
 			maker.entity.put @graphics_render_target.entity, 0, 0
 			# transition layout
 			new_frame.entity.lock
 			@width.times do |x|
 				@height.times do |y|
-					alpha = imgmap[x][y].zero? ? 255 : [255 / (duration / (255.0 / imgmap[x][y])), 255].min
-					new_frame.entity[x, y] = pf.map_rgba(picmap[x][y][0], picmap[x][y][1], picmap[x][y][2], alpha)
-					#TODO : alpha will be 255 after many render.it's different fron RPG Maker
+					alpha = if imgmap[x][y].zero?
+						        255
+					        else
+						        [255 / (duration / (255.0 / imgmap[x][y])), 255].min
+					        end
+					new_frame.entity[x, y] = pf.map_rgba *picmap[x][y][0..2], alpha
+					# TODO: alpha will be 255 after many render.it's different fron RPG Maker
 				end
 			end
 			new_frame.entity.unlock
@@ -169,5 +169,16 @@ module Graphics
 			#SDL::Screen.set_gamma(5,1,1)
 			#seems SDL::Screen.set_gamma and SDL::Screen.set_gamma_rmap doesn't work
 		end
+		
+		private def init # :nodoc:
+			@entity = SDL::Screen.open Graphics.width, Graphics.height,
+			                           0, SDL::HWSURFACE | SDL::HWPALETTE
+			if @graphics_render_target && !@graphics_render_target.disposed?
+				@graphics_render_target.dispose
+			end
+			@graphics_render_target = Bitmap.new @width, @height
+			nil
+		end
+		
 	end
 end

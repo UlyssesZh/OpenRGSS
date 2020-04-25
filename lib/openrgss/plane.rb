@@ -2,7 +2,7 @@
 class Plane
 	
 	# Refers to the bitmap (Bitmap) used in the plane.
-	#attr_accessor :bitmap
+	attr_accessor :bitmap
 	
 	# Refers to the viewport (Viewport) associated with the plane.
 	#attr_accessor :viewport
@@ -40,16 +40,17 @@ class Plane
 	#attr_accessor :tone
 	
 	# Creates a Plane object. Specifies a viewport (Viewport) when necessary.
-	def initialize(arg_viewport=nil)
-		@sprite = Sprite.new(arg_viewport)
-		@src_bitmap = nil
+	def initialize viewport = nil
+		@ox = 0
+		@oy = 0
+		@sprite = Sprite.new viewport
+		@bitmap = nil
 	end
 	
 	# Frees the plane. If the plane has already been freed, does nothing.
 	
 	def dispose
-		@sprite.bitmap.dispose unless @sprite.bitmap.nil? or @sprite.bitmap.disposed?
-		@sprite.dispose unless @sprite.nil? or @sprite.disposed?
+		@sprite.dispose if @sprite && !@sprite.disposed?
 	end
 	
 	# Returns TRUE if the plane has been freed.
@@ -58,45 +59,80 @@ class Plane
 		@sprite.nil? or @sprite.disposed?
 	end
 	
-	
-	def ox=(val)
-		@sprite.ox= (val % (@src_bitmap.nil? ? 1 : @src_bitmap.width))
+	def bitmap= bitmap
+		@bitmap = bitmap
+		refresh_sprite
 	end
 	
-	
-	def oy=(val)
-		@sprite.oy= (val % (@src_bitmap.nil? ? 1 : @src_bitmap.height))
+	def method_missing symbol, *args
+		@sprite.respond_to?(symbol) ? @sprite.send(symbol, *args) : super
 	end
 	
-	
-	def bitmap
-		@src_bitmap
+	def respond_to_missing? *args
+		@sprite.respond_to?(*args) || super
 	end
 	
-	
-	def bitmap=(arg_bmp)
-		vp_width = @sprite.viewport.nil? ? \
-                            Graphics.width : @sprite.viewport.rect.width
-		vp_height = @sprite.viewport.nil? ? \
-                            Graphics.height : @sprite.viewport.rect.height
-		x_steps = [(vp_width / arg_bmp.width).ceil, 1].max * 2
-		y_steps = [(vp_height / arg_bmp.height).ceil, 1].max * 2
+	private def refresh_sprite
+		unless @bitmap
+			@sprite.bitmap.clear
+			return
+		end
 		
-		bmp_width = x_steps * arg_bmp.width
-		bmp_height = y_steps * arg_bmp.height
+		if @sprite.viewport
+			drawn_width = @sprite.viewport.rect.width
+			drawn_height = @sprite.viewport.rect.height
+		else
+			drawn_width = Graphics.width
+			drawn_height = Graphics.height
+		end
+		@sprite.bitmap.dispose if @sprite.bitmap && !@sprite.bitmap.disposed?
+		@sprite.bitmap = Bitmap.new drawn_width + @bitmap.width,
+		                            drawn_height + @bitmap.height
 		
-		@src_bitmap = arg_bmp
-		@sprite.bitmap.dispose unless @sprite.bitmap.nil? or @sprite.bitmap.disposed?
-		@sprite.bitmap = Bitmap.new(bmp_width, bmp_height)
+		rect = @bitmap.rect
+		(0...drawn_width).step @bitmap.width do |x|
+			(0...drawn_height).step @bitmap.height do |y|
+				@sprite.bitmap.blt x, y, @bitmap, rect
+			end
+		end
 		
-		x_steps.times { |ix| y_steps.times { |iy|
-			@sprite.bitmap.blt(ix * arg_bmp.width, iy * arg_bmp.height,
-			                   @src_bitmap, @src_bitmap.rect)
-		} }
-	end
-	
-	def method_missing(symbol, *args)
-		@sprite.method(symbol).call(*args)
+		leftover_width = @sprite.width % @bitmap.width
+		rect = Rect.new 0, 0, leftover_width, @bitmap.height
+		(0...drawn_height).step @bitmap.height do |y|
+			@sprite.bitmap.blt drawn_width, y, @bitmap, rect
+		end
+		
+		leftover_height = @sprite.height % @bitmap.height
+		rect = Rect.new 0, 0, @bitmap.width, leftover_height
+		(0...drawn_width).step @bitmap.width do |x|
+			@sprite.bitmap.blt x, drawn_height, @bitmap, rect
+		end
+		
+		rect = Rect.new 0, 0, leftover_width, leftover_height
+		@sprite.bitmap.blt drawn_width, drawn_height, @bitmap, rect
+		
+		@sprite.x = @ox.modulo(@bitmap.width) - @bitmap.width
+		@sprite.y = @oy.modulo(@bitmap.height) - @bitmap.height
+=begin
+		vp_width = @sprite.viewport.nil? ?
+				           Graphics.width : @sprite.viewport.rect.width
+		vp_height = @sprite.viewport.nil? ?
+				            Graphics.height : @sprite.viewport.rect.height
+		x_steps = [(vp_width / bitmap.width).ceil, 1].max * 2
+		y_steps = [(vp_height / bitmap.height).ceil, 1].max * 2
+		bmp_width = x_steps * bitmap.width
+		bmp_height = y_steps * bitmap.height
+		@src_bitmap = bitmap
+		@sprite.bitmap.dispose if @sprite.bitmap && !@sprite.bitmap.disposed?
+		@sprite.bitmap = Bitmap.new bmp_width, bmp_height
+		x_steps.times do |ix|
+			y_steps.times do |iy|
+				@sprite.bitmap.blt ix * bitmap.width, iy * bitmap.height,
+				                   @src_bitmap, @src_bitmap.rect
+			end
+		end
+=end
+		nil
 	end
 
 end

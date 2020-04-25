@@ -102,5 +102,10 @@ module Audio
 		def se_stop
 			SDL::Mixer.halt @se_channel if @me_channel
 		end
+		
+		private def init # :nodoc:
+			SDL::Mixer.open SDL::Mixer::DEFAULT_FREQUENCY, SDL::Mixer::DEFAULT_FORMAT, SDL::Mixer::DEFAULT_CHANNELS, 1536
+			nil
+		end
 	end
 end

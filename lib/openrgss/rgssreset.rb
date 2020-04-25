@@ -3,5 +3,4 @@
 # Name changed from the hidden class Reset before RGSS2.
 
 class RGSSReset < Exception
-
 end

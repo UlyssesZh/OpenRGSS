@@ -1,5 +1,5 @@
 class Viewport
-	#The box (Rect) defining the viewport.
+	# The box (Rect) defining the viewport.
 	attr_accessor :rect
 	
 	# The viewport's visibility. If TRUE, the viewport is visible. The default is TRUE.
@@ -36,10 +36,10 @@ class Viewport
 	#
 	# Same size as the screen if no argument is specified.
 	
-	def initialize(*args)
+	def initialize x = 0, y = 0, width = Graphics.width, height = Graphics.height
 		@tone       = Tone.new
 		@color      = Color.new
-		@rect       = args.empty? ? Rect.new(0, 0, Graphics.width, Graphics.height) : Rect.new(*args)
+		@rect       = x.is_a?(Rect) ? x.clone : Rect.new(x, y, width, height)
 		@created_at = Time.now
 		@z          = 0
 		@ox         = 0
@@ -64,19 +64,18 @@ class Viewport
 	#
 	# If color is set to nil, the viewport will disappear while flashing.
 	
-	def flash(color, duration)
-	
+	def flash color, duration
+		# TODO
 	end
 	# Refreshes the viewport flash. As a rule, this method is called once per frame.
 	#
 	# It is not necessary to call this method if no flash effect is needed.
 	
 	def update
-	
 	end
 	
-	def z=(z)
+	def z= z
 		@z = z
-		RGSS.resources.select { |resource| resource.viewport == self }.each { |resource| resource.visible = resource.visible }
+		RGSS.resources.select { |r| r.viewport == self }.each { |r| r.visible = r.visible }
 	end
 end

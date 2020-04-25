@@ -30,7 +30,8 @@ module RGSS
 			set_caption
 		end
 		
-		# 在load_path指定的目录中查找文件，会自动补全Autoload_Extname里指定的扩展面给，默认为 .png, .jpg, .gif, .bmp, .ogg, .wma, .mp3, .wav, .mid
+		# 在load_path指定的目录中查找文件，会自动补全Autoload_Extname里指定的扩展面给，默认为
+		# .png, .jpg, .gif, .bmp, .ogg, .wma, .mp3, .wav, .mid
 		#
 		# 在Audio和Bitmap的内部自动调用
 		#
@@ -52,10 +53,9 @@ module RGSS
 		
 		def init
 			SDL.init SDL::INIT_EVERYTHING
-			Graphics.entity = SDL::Screen.open(Graphics.width, Graphics.height, 0, SDL::HWSURFACE|SDL::HWPALETTE)
-			SDL::Mixer.open(SDL::Mixer::DEFAULT_FREQUENCY, SDL::Mixer::DEFAULT_FORMAT, SDL::Mixer::DEFAULT_CHANNELS, 1536)
-			SDL::TTF.init
-			self.title = @title
+			[Graphics, Audio, Font].each { |klass| klass.send :init }
+			set_caption
+			true
 		end
 		
 		# 指定是否显示帧率
@@ -66,14 +66,14 @@ module RGSS
 		end
 		
 		def set_caption
-			SDL::WM.set_caption(@show_fps ? "#{title} - #{Graphics.real_fps}fps" : title, title)
+			SDL::WM.set_caption @show_fps ? "#{title} - #{Graphics.real_fps}fps" : title, title
 		end
 		
 		# 引擎的更新，将在Graphics.update和Input.update的内部自动调用
 		
 		def update
 			if @show_fps and @fps != Graphics.real_fps
-				SDL::WM.set_caption("#{title} - #{Graphics.real_fps}fps", title)
+				SDL::WM.set_caption "#{title} - #{Graphics.real_fps}fps", title
 				@fps = Graphics.real_fps
 			end
 			
@@ -89,8 +89,8 @@ module RGSS
 			end
 		end
 	end
-	self.load_ext  = %w[.png .jpg .gif .bmp .ogg .wma .mp3 .wav .mid]
-	self.load_path = []
+	@load_ext  = %w[.png .jpg .gif .bmp .ogg .wma .mp3 .wav .mid]
+	@load_path = []
 	# Evaluates the provided block one time only.
 	#
 	# Detects a reset within a block with a press of the F12 key and returns to the beginning if reset.
@@ -238,7 +238,7 @@ module RGSS
 			RGSS.resources.delete self unless @visible
 			if @visible
 				RGSS.resources.delete self
-				RGSS.resources<< self
+				RGSS.resources << self
 				#   RGSS.resources.sort
 			end
 =begin

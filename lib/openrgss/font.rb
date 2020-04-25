@@ -10,23 +10,24 @@
 
 class Font
 	@@cache = {}
+	
 	# Creates a Font object.
 	
-	def initialize(arg_name=@@default_name, arg_size=@@default_size)
-		@name  = arg_name
-		@size  = arg_size
-		@bold  = @@default_bold
-		@italic= @@default_italic
-		@color = @@default_color
+	def initialize name = Font.default_name, size = Font.default_size
+		@name  = name
+		@size  = size
+		@bold  = Font.default_bold
+		@italic= Font.default_italic
+		@color = Font.default_color
 	end
 	
 	# Returns true if the specified font exists on the system.
 	
-	def Font.exist?(arg_font_name)
+	def Font.exist? font_name # TODO on Linux and on Windows without Win32API
 		font_key       = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'
-		reg_open_keyex = Win32API.new('Advapi32', 'RegOpenKeyEx', 'lpllp', 'l')
-		reg_enum_value = Win32API.new('Advapi32', 'RegEnumValue', 'llppiiii', 'l')
-		reg_close_key  = Win32API.new('Advapi32', 'RegCloseKey', 'l', 'l')
+		reg_open_keyex = Win32API.new 'Advapi32', 'RegOpenKeyEx', 'lpllp', 'l'
+		reg_enum_value = Win32API.new 'Advapi32', 'RegEnumValue', 'llppiiii', 'l'
+		reg_close_key  = Win32API.new 'Advapi32', 'RegCloseKey', 'l', 'l'
 		open_key       = [0].pack('V')
 		# get key
 		reg_open_keyex.call(0x80000002, font_key, 0, 0x20019, open_key)
@@ -36,17 +37,17 @@ class Font
 		buff_size = [255].pack('l')
 		key_i     = 0
 		font_names= []
-		while (reg_enum_value.call(open_key, key_i, buffer, buff_size, 0, 0, 0, 0).zero?)
+		while reg_enum_value.call(open_key, key_i, buffer, buff_size, 0, 0, 0, 0).zero?
 			# get name
 			font_names << buffer[0, buff_size.unpack('l').first].sub(/\s\(.*\)/, '')
 			# reset
-			buff_size = [255].pack('l')
+			buff_size = [255].pack 'l'
 			# increment
-			key_i     += 1
+			key_i += 1
 		end
-		reg_close_key.call(open_key)
+		reg_close_key.(open_key)
 		# test
-		return font_names.include?(arg_font_name)
+		return font_names.include?(font_name)
 	end
 	
 	# SDL::TTF对象
@@ -88,19 +89,18 @@ class Font
 	# The outline color (Color). The default is (0,0,0,128).
 	attr_accessor :out_color
 	
-	class <<self
-		[:name, :size, :bold, :italic, :color, :outline, :shadow, :out_color].each { |attribute|
-			name = 'default_' + attribute.to_s
-			define_method(name) { class_variable_get('@@'+name) }
-			define_method(name+'=') { |value| class_variable_set('@@'+name, value) }
-		}
+	class << self
+		attr_accessor :default_name, :default_size, :default_bold,
+		              :default_italic, :default_color
+		private def init # :nodoc:
+			SDL::TTF.init
+			# Standard Einstellungen aus der RGSS102E.dll.
+			@default_name = 'Arial'
+			@default_size = 22
+			@default_bold = false
+			@default_italic = false
+			@default_color = Color.new *[255] * 4
+			nil
+		end
 	end
-	#------------------------------------------------------------------------
-	# * Standard Einstellungen aus der RGSS102E.dll.
-	#------------------------------------------------------------------------
-	@@default_name  = "Arial"
-	@@default_size  = 22
-	@@default_bold  = false
-	@@default_italic= false
-	@@default_color = Color.new(255, 255, 255, 255)
 end
