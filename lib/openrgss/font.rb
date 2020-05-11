@@ -53,7 +53,7 @@ class Font
 	# SDL::TTF对象
 	
 	def entity
-		result       = @@cache[[@name, @size]] ||= SDL::TTF.open('wqy-microhei.ttc', @size)
+		result       = @@cache[[@name, @size]] ||= SDL::TTF.open(@name, @size)
 		result.style = (@bold ? SDL::TTF::STYLE_BOLD : 0) | (@italic ? SDL::TTF::STYLE_ITALIC : 0)
 		result
 	end

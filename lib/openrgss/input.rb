@@ -40,7 +40,7 @@ module Input
 			RGSS.update
 			@status.each { |key, value| @status[key] = value.next }
 			while event = events.shift
-				key = Entities[event.sym]
+				key = ENTITIES[event.sym]
 				#Log.debug('key') { event }
 				if event.press
 					case key
